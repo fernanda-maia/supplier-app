@@ -1,25 +1,23 @@
 package io.github.fernanda.maia.supplier.app.rest.resource;
 
-import io.github.fernanda.maia.supplier.app.domain.model.Company;
-import io.github.fernanda.maia.supplier.app.domain.repository.CompanyRepository;
 import io.github.fernanda.maia.supplier.app.rest.dto.CompanyDTO;
-
+import io.github.fernanda.maia.supplier.app.domain.model.Company;
 import io.github.fernanda.maia.supplier.app.rest.dto.ErrorResponse;
 import io.github.fernanda.maia.supplier.app.rest.dto.ValidationError;
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import io.github.fernanda.maia.supplier.app.domain.service.CompanyService;
+import io.github.fernanda.maia.supplier.app.util.exceptions.BusinessException;
 
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validator;
 import jakarta.ws.rs.*;
+import jakarta.validation.Validator;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.validation.ConstraintViolation;
 
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 
 import lombok.RequiredArgsConstructor;
 
-import java.util.Set;
+import java.util.*;
 
 @Path(value = "/v1/companies")
 @Consumes(value = MediaType.APPLICATION_JSON)
@@ -27,47 +25,42 @@ import java.util.Set;
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class CompanyResourceV1 {
 
-    private final CompanyRepository repository;
+    private final CompanyService service;
     private final Validator validator;
 
     @GET
     public Response listAllCompanies() {
-        PanacheQuery<Company> companies = repository.findAll();
-        return Response.ok(companies.list()).build();
+        return Response.ok(service.listAllCompanies()).build();
     }
 
     @GET
     @Path("{id}")
     public Response getById(@PathParam(value = "id") Long id) {
         Response response;
-        Company company = repository.findById(id);
+        List<BusinessException> exceptions = new ArrayList<>();
 
-        response = company != null?
-                Response.ok(company).build() :
-                Response.status(Response.Status.NOT_FOUND).build();
+        try {
+            Company company = service.getById(id);
+            response = Response.ok(company).build();
+
+        } catch(BusinessException e) {
+            exceptions.add(e);
+            response = e.generateResponse(exceptions).status(e.getStatus());
+
+        }
 
         return response;
     }
 
     @POST
-    @Transactional
     public Response createCompany(CompanyDTO request) {
         Response response;
         Set<ConstraintViolation<CompanyDTO>> violations = validator.validate(request);
 
         if(violations.isEmpty()) {
-            Company newCompany = Company.builder()
-                    .cpf(request.getCpf())
-                    .cnpj(request.getCnpj())
-                    .type(request.getType())
-                    .name(request.getName())
-                    .cep(request.getCep())
-                    .email(request.getEmail())
-                    .active(true)
-                    .build();
-
-            repository.persist(newCompany);
-            response = Response.ok(newCompany).build();
+            Company newCompany = service.createCompany(request);
+            response = Response.status(Response.Status.CREATED)
+                    .entity(newCompany).build();
 
         } else {
             ErrorResponse errorResponse = ValidationError.generateResponse(violations);
@@ -75,82 +68,84 @@ public class CompanyResourceV1 {
                     .entity(errorResponse).build();
         }
 
-
         return response;
     }
 
     @DELETE
-    @Transactional
     @Path(value = "{id}")
     public Response deleteCompany(@PathParam(value = "id") Long id) {
         Response response;
-        Company companyToDelete = repository.findById(id);
+        List<BusinessException> exceptions = new ArrayList<>();
 
-        if(companyToDelete != null) {
-            repository.delete(companyToDelete);
+        try {
+            service.deleteCompany(id);
             response = Response.noContent().build();
 
-        } else {
-            response = Response.status(Response.Status.NOT_FOUND).build();
+        } catch(BusinessException e) {
+            exceptions.add(e);
+            response = e.generateResponse(exceptions).status(e.getStatus());
         }
 
         return response;
     }
 
     @PUT
-    @Transactional
     @Path(value = "{id}")
     public Response updateCompany(@PathParam(value = "id") Long id, CompanyDTO request) {
         Response response;
-        Company companyToUpdate = repository.findById(id);
+        List<BusinessException> exceptions = new ArrayList<>();
 
-        if(companyToUpdate != null) {
-            companyToUpdate.setName(request.getName());
-            companyToUpdate.setEmail(request.getEmail());
-            companyToUpdate.setCep(request.getCep());
+        Set<ConstraintViolation<CompanyDTO>> violations = validator.validate(request);
 
-            response = Response.noContent().build();
+        if(violations.isEmpty()) {
+            try {
+                Company companyToUpdate = service.updateCompany(id, request);
+                response = Response.ok(companyToUpdate).build();
+
+            } catch(BusinessException e) {
+                exceptions.add(e);
+                response = e.generateResponse(exceptions).status(e.getStatus());
+            }
 
         } else {
-            response = Response.status(Response.Status.NOT_FOUND).build();
+            response = ValidationError.generateResponse(violations)
+                    .status(ErrorResponse.UNPROCESSABLE_ENTITY_STATUS);
         }
 
         return response;
     }
 
     @PATCH
-    @Transactional
     @Path("deactivate/{id}")
     public Response deactivateCompany(@PathParam(value = "id") Long id) {
         Response response;
-        Company companyToDeactivate = repository.findById(id);
+        List<BusinessException> exceptions = new ArrayList<>();
 
-        if(companyToDeactivate != null) {
-            companyToDeactivate.setActive(false);
+        try {
+            Company companyToDeactivate = service.setActive(id, false);
+            response = Response.ok(companyToDeactivate).build();
 
-            response = Response.noContent().build();
-
-        } else {
-            response = Response.status(Response.Status.NOT_FOUND).build();
+        } catch(BusinessException e) {
+            exceptions.add(e);
+            response = e.generateResponse(exceptions).status(e.getStatus());
         }
 
         return response;
     }
 
     @PATCH
-    @Transactional
     @Path("activate/{id}")
     public Response activateCompany(@PathParam(value = "id") Long id) {
         Response response;
-        Company companyToActivate = repository.findById(id);
+        List<BusinessException> exceptions = new ArrayList<>();
 
-        if(companyToActivate != null) {
-            companyToActivate.setActive(true);
+        try {
+            Company companyToDeactivate = service.setActive(id, true);
+            response = Response.ok(companyToDeactivate).build();
 
-            response = Response.noContent().build();
-
-        } else {
-            response = Response.status(Response.Status.NOT_FOUND).build();
+        } catch(BusinessException e) {
+            exceptions.add(e);
+            response = e.generateResponse(exceptions).status(e.getStatus());
         }
 
         return response;
