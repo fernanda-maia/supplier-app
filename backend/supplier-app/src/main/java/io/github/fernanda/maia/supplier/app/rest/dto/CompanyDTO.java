@@ -1,22 +1,20 @@
 package io.github.fernanda.maia.supplier.app.rest.dto;
 
+import io.github.fernanda.maia.supplier.app.util.enums.ServiceType;
 import io.github.fernanda.maia.supplier.app.util.constraints.EnumAvailable;
 import io.github.fernanda.maia.supplier.app.util.constraints.NotNullWhenType;
-import io.github.fernanda.maia.supplier.app.util.enums.ServiceType;
 
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
-import org.hibernate.validator.constraints.br.CNPJ;
 import org.hibernate.validator.constraints.br.CPF;
+import org.hibernate.validator.constraints.br.CNPJ;
 
 @Data
 @Builder
@@ -36,6 +34,9 @@ public class CompanyDTO {
 
     @NotBlank(message = "Campo nome é obrigatório")
     private String name;
+
+    @NotBlank(message = "Campo cep é obrigatório")
+    @Pattern(regexp = "^(([0-9]{2}\\.[0-9]{3}-[0-9]{3})|([0-9]{2}[0-9]{3}-[0-9]{3})|([0-9]{8}))$", message = "Formato de CEP inválido")
     private String cep;
 
     @Email(message = "Formato de e-mail inválido")

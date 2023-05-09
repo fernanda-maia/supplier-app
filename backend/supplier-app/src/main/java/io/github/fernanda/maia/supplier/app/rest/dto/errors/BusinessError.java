@@ -1,4 +1,4 @@
-package io.github.fernanda.maia.supplier.app.rest.dto;
+package io.github.fernanda.maia.supplier.app.rest.dto.errors;
 
 
 import jakarta.ws.rs.core.Response;

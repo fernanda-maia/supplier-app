@@ -1,13 +1,11 @@
 package io.github.fernanda.maia.supplier.app.domain.model;
 
-import io.github.fernanda.maia.supplier.app.util.enums.ServiceType;
-
 import jakarta.persistence.*;
 
 import lombok.*;
 
-@Entity
 @Data
+@Entity
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,8 +17,12 @@ public class Company {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true)
     private String cpf;
+
+    @Column(unique = true)
     private String cnpj;
+
     private String type;
     private String name;
     private String cep;

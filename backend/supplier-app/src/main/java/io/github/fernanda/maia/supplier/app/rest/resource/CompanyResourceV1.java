@@ -3,7 +3,7 @@ package io.github.fernanda.maia.supplier.app.rest.resource;
 import io.github.fernanda.maia.supplier.app.rest.dto.CompanyDTO;
 import io.github.fernanda.maia.supplier.app.domain.model.Company;
 import io.github.fernanda.maia.supplier.app.rest.dto.ErrorResponse;
-import io.github.fernanda.maia.supplier.app.rest.dto.ValidationError;
+import io.github.fernanda.maia.supplier.app.rest.dto.errors.ValidationError;
 import io.github.fernanda.maia.supplier.app.domain.service.CompanyService;
 import io.github.fernanda.maia.supplier.app.util.exceptions.BusinessException;
 
@@ -56,11 +56,18 @@ public class CompanyResourceV1 {
     public Response createCompany(CompanyDTO request) {
         Response response;
         Set<ConstraintViolation<CompanyDTO>> violations = validator.validate(request);
+        List<BusinessException> exceptions = new ArrayList<>();
 
         if(violations.isEmpty()) {
-            Company newCompany = service.createCompany(request);
-            response = Response.status(Response.Status.CREATED)
-                    .entity(newCompany).build();
+            try {
+                Company newCompany = service.createCompany(request);
+                response = Response.status(Response.Status.CREATED)
+                        .entity(newCompany).build();
+            } catch(BusinessException e) {
+                exceptions.add(e);
+                response = e.generateResponse(exceptions).status(e.getStatus());
+            }
+
 
         } else {
             ErrorResponse errorResponse = ValidationError.generateResponse(violations);

@@ -2,6 +2,9 @@ package io.github.fernanda.maia.supplier.app.domain.service;
 
 import io.github.fernanda.maia.supplier.app.rest.dto.CompanyDTO;
 import io.github.fernanda.maia.supplier.app.domain.model.Company;
+import io.github.fernanda.maia.supplier.app.util.enums.ServiceType;
+import io.github.fernanda.maia.supplier.app.util.exceptions.AlreadyRegisteredException;
+import io.github.fernanda.maia.supplier.app.util.exceptions.BusinessException;
 import io.github.fernanda.maia.supplier.app.util.exceptions.NotFoundException;
 import io.github.fernanda.maia.supplier.app.domain.repository.CompanyRepository;
 
@@ -12,7 +15,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @ApplicationScoped
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
@@ -31,6 +37,7 @@ public class CompanyService {
 
     @Transactional
     public Company createCompany(CompanyDTO request) {
+        checkUniqueness(request);
         Company newCompany = Company.builder()
                     .cpf(request.getCpf())
                     .cnpj(request.getCnpj())
@@ -58,6 +65,7 @@ public class CompanyService {
     @Transactional
     public Company updateCompany(Long id, CompanyDTO request) throws NotFoundException {
         Company companyToUpdate = this.exists(id);
+        checkUniqueness(request, id);
 
         companyToUpdate.setName(request.getName());
         companyToUpdate.setEmail(request.getEmail());
@@ -84,4 +92,54 @@ public class CompanyService {
 
         return company;
     }
+
+    private Map<String, String> setDocValue(CompanyDTO companyDTO) {
+        Map<String, String> result = new HashMap<>() {{
+            put("field", "");
+            put("value", null);
+        }};
+
+        String type = companyDTO.getType();
+
+        if(type.equals(ServiceType.PJ.getDescription())) {
+            companyDTO.setCpf(null);
+            result.put("field", "cnpj");
+            result.put("value", companyDTO.getCnpj());
+
+        } else if (type.equals(ServiceType.PF.getDescription())) {
+            companyDTO.setCnpj(null);
+            result.put("field", "cpf");
+            result.put("value", companyDTO.getCpf());
+        }
+
+        return result;
+    }
+
+    private void checkUniqueness(CompanyDTO companyDTO) throws AlreadyRegisteredException {
+        Map<String, String> docEntry = setDocValue(companyDTO);
+        String field = docEntry.get("field");
+        String value = docEntry.get("value");
+
+        if(!field.isBlank() && !repository.list(field, value).isEmpty()) {
+            String message = String.format("%s with number %s alredy registered", field.toUpperCase(), value);
+            throw new AlreadyRegisteredException(message, Company.class);
+        }
+    }
+
+    private void checkUniqueness(CompanyDTO companyDTO, Long id) throws AlreadyRegisteredException {
+        Map<String, String> docEntry = setDocValue(companyDTO);
+        String field = docEntry.get("field");
+        String value = docEntry.get("value");
+
+        if(!field.isBlank()) {
+            Optional<Company> company = repository.find(field, value).firstResultOptional();
+
+            if(company.isPresent() && !company.get().getId().equals(id)) {
+                String message = String.format("%s with number %s alredy registered", field.toUpperCase(), value);
+                throw new AlreadyRegisteredException(message, Company.class);
+            }
+
+        }
+    }
+
 }

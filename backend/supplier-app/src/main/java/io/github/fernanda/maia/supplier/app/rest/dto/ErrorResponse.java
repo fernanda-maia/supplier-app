@@ -1,5 +1,6 @@
 package io.github.fernanda.maia.supplier.app.rest.dto;
 
+import io.github.fernanda.maia.supplier.app.rest.dto.errors.BusinessError;
 import jakarta.ws.rs.core.Response;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,7 +20,7 @@ public class ErrorResponse {
     private String reference;
     private String type;
     private int status;
-    private String detail;
+    private String details;
     private List<BusinessError> errors;
 
     public Response status(int code) {

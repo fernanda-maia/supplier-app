@@ -1,11 +1,10 @@
 package io.github.fernanda.maia.supplier.app.util.exceptions;
 
 import io.github.fernanda.maia.supplier.app.rest.dto.ErrorResponse;
-import io.github.fernanda.maia.supplier.app.rest.dto.NotFoundError;
+import io.github.fernanda.maia.supplier.app.rest.dto.errors.NotFoundError;
 import jakarta.ws.rs.core.Response;
 
 import java.util.List;
-import java.util.Set;
 
 public class NotFoundException extends BusinessException {
 

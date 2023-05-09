@@ -7,6 +7,7 @@ import java.util.List;
 
 public abstract class BusinessException extends RuntimeException {
     public static final int NOT_FOUND = Response.Status.NOT_FOUND.getStatusCode();
+    public static final int UNPROCESSABLE_ENTITY = 422;
     public static final int BAD_REQUEST = Response.Status.BAD_REQUEST.getStatusCode();
 
     private Class<?> entity;
