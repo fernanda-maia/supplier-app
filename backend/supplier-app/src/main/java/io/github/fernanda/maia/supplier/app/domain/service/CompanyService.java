@@ -1,16 +1,15 @@
 package io.github.fernanda.maia.supplier.app.domain.service;
 
+import io.github.fernanda.maia.supplier.app.rest.dao.CompanyDAO;
 import io.github.fernanda.maia.supplier.app.rest.dto.CompanyDTO;
 import io.github.fernanda.maia.supplier.app.domain.model.Company;
 import io.github.fernanda.maia.supplier.app.util.enums.ServiceType;
+import io.github.fernanda.maia.supplier.app.util.exceptions.ActiveStateException;
 import io.github.fernanda.maia.supplier.app.util.exceptions.AlreadyRegisteredException;
-import io.github.fernanda.maia.supplier.app.util.exceptions.BusinessException;
 import io.github.fernanda.maia.supplier.app.util.exceptions.NotFoundException;
-import io.github.fernanda.maia.supplier.app.domain.repository.CompanyRepository;
 
 import jakarta.inject.Inject;
 import jakarta.validation.Validator;
-import jakarta.transaction.Transactional;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import lombok.RequiredArgsConstructor;
@@ -18,26 +17,23 @@ import lombok.RequiredArgsConstructor;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @ApplicationScoped
 @RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class CompanyService {
 
-    private final CompanyRepository repository;
+    private final CompanyDAO companyDAO;
     private final Validator validator;
 
     public List<Company> listAllCompanies() {
-        return repository.findAll().list();
+        return companyDAO.getAll();
     }
 
-    public Company getById(Long id) throws NotFoundException {
+    public Company getById(Long id) {
         return this.exists(id);
     }
 
-    @Transactional
     public Company createCompany(CompanyDTO request) {
-        checkUniqueness(request);
         Company newCompany = Company.builder()
                     .cpf(request.getCpf())
                     .cnpj(request.getCnpj())
@@ -48,49 +44,51 @@ public class CompanyService {
                     .active(true)
                     .build();
 
+        String message = createMessage(request);
 
-        repository.persist(newCompany);
-
-        return newCompany;
+        return companyDAO.save(newCompany)
+                .orElseThrow(() -> new AlreadyRegisteredException(message, Company.class));
     }
 
-    @Transactional
     public Company deleteCompany(Long id) throws NotFoundException {
         Company companyToDelete = this.exists(id);
-        repository.delete(companyToDelete);
+        Long companyId = companyDAO.deleteById(id);
+
+        if(companyId == null) {
+            throw new ActiveStateException("The company must be deactivated before delete", Company.class);
+        }
 
         return companyToDelete;
     }
 
-    @Transactional
-    public Company updateCompany(Long id, CompanyDTO request) throws NotFoundException {
-        Company companyToUpdate = this.exists(id);
-        checkUniqueness(request, id);
+    public Company updateCompany(Long id, CompanyDTO request)  {
+        Company company = this.exists(id);
 
-        companyToUpdate.setName(request.getName());
-        companyToUpdate.setEmail(request.getEmail());
-        companyToUpdate.setCep(request.getCep());
+        company.setCpf(request.getCpf());
+        company.setCnpj(request.getCnpj());
+        company.setType(request.getType());
+        company.setEmail(request.getEmail());
+        company.setCep(request.getCep());
+        company.setName(request.getName());
 
-        return companyToUpdate;
+        String message = createMessage(request);
+
+        return companyDAO.update(id, company)
+                .orElseThrow(() -> new AlreadyRegisteredException(message, Company.class));
     }
 
-    @Transactional
-    public Company setActive(Long id, boolean active) throws NotFoundException {
+    public Company setActive(Long id, boolean active) {
         Company company = this.exists(id);
-        company.setActive(active);
+        company = companyDAO.setActiveStateCompany(id, active).orElse(null);
 
         return company;
     }
 
     private Company exists(Long id) throws NotFoundException{
-        Company company = repository.findById(id);
+        String message = String.format("Company with %d id not found", id);
+        return companyDAO.getById(id)
+                .orElseThrow(() -> new NotFoundException(message, Company.class));
 
-        if(company == null) {
-            String message = String.format("Company with %d id not found", id);
-            throw new NotFoundException(message, Company.class);
-        }
-
-        return company;
     }
 
     private Map<String, String> setDocValue(CompanyDTO companyDTO) {
@@ -115,31 +113,17 @@ public class CompanyService {
         return result;
     }
 
-    private void checkUniqueness(CompanyDTO companyDTO) throws AlreadyRegisteredException {
-        Map<String, String> docEntry = setDocValue(companyDTO);
-        String field = docEntry.get("field");
-        String value = docEntry.get("value");
-
-        if(!field.isBlank() && !repository.list(field, value).isEmpty()) {
-            String message = String.format("%s with number %s alredy registered", field.toUpperCase(), value);
-            throw new AlreadyRegisteredException(message, Company.class);
-        }
-    }
-
-    private void checkUniqueness(CompanyDTO companyDTO, Long id) throws AlreadyRegisteredException {
+    private String createMessage(CompanyDTO companyDTO) {
+        String message = "";
         Map<String, String> docEntry = setDocValue(companyDTO);
         String field = docEntry.get("field");
         String value = docEntry.get("value");
 
         if(!field.isBlank()) {
-            Optional<Company> company = repository.find(field, value).firstResultOptional();
-
-            if(company.isPresent() && !company.get().getId().equals(id)) {
-                String message = String.format("%s with number %s alredy registered", field.toUpperCase(), value);
-                throw new AlreadyRegisteredException(message, Company.class);
-            }
-
+            message = String.format("%s with number %s already registered", field.toUpperCase(), value);
         }
+
+        return message;
     }
 
 }

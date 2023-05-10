@@ -2,39 +2,36 @@ package io.github.fernanda.maia.supplier.app.rest.dto.errors;
 
 import io.github.fernanda.maia.supplier.app.rest.dto.ErrorResponse;
 import io.github.fernanda.maia.supplier.app.util.exceptions.BusinessException;
-import jakarta.validation.ConstraintViolation;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
-@Data
+@Getter
 @Builder
-public class ValidationError implements BusinessError {
-
-    private static final String type = "Validation Error";
+public class ActiveStateError {
+    private static final String type = "Active State Error";
     private static final String reference = "https://docs.oracle.com/en";
-    private static final String detail = "The request parameters failed to validate";
+    private static final String detail = "Cannot perform the action with the current Active state";
 
-    private String field;
+    private String entity;
     private String reason;
 
-    public static  <T> ErrorResponse generateResponse(Set<ConstraintViolation<T>> violations) {
+    public static  <T> ErrorResponse generateResponse(List<BusinessException> violations) {
         List<BusinessError> errors = violations.stream().map(c ->
-                ValidationError.builder()
-                        .field(c.getPropertyPath().toString())
+                NotFoundError.builder()
+                        .entity(c.getEntity())
                         .reason(c.getMessage())
                         .build()).collect(Collectors.toList());
 
+
         return ErrorResponse.builder()
                 .type(type)
-                .status(BusinessException.BAD_REQUEST)
+                .status(BusinessException.CONFLICT)
                 .reference(reference)
                 .details(detail)
                 .errors(errors)
                 .build();
     }
-
 }

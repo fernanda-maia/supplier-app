@@ -13,8 +13,8 @@ import java.util.stream.Collectors;
 @Getter
 public class AlreadyRegisteredError implements BusinessError{
     private static final String type = "Already Registered Error";
-    private static final String reference = "https://docs.oracle.com/en/cloud/saas/marketing/eloqua-develop/Developers/GettingStarted/APIRequests/Validation-errors.htm";
-    private static final String detail = "This entity is already registered";
+    private static final String reference = "https://docs.oracle.com/en/";
+    private static final String detail = "The entity is already registered";
 
     private String entity;
     private String reason;
