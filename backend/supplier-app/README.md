@@ -1,52 +1,87 @@
-# supplier-app
+# Service API
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+API de cadastro de prestadores de serviços 
 
-If you want to learn more about Quarkus, please visit its website: https://quarkus.io/ .
+## Tecnologias
 
-## Running the application in dev mode
+* Java 17
+* Maven
+* Quarkus
+* PostgreSQL
 
-You can run your application in dev mode that enables live coding using:
-```shell script
-./mvnw compile quarkus:dev
+## Model
+- - - -
+### Company
+```json
+{
+  "id": 1,
+  "cpf": "000.000.000-00",
+  "type": "PF",
+  "name": "John Doe",
+  "cep": "00000-000",
+  "email": "example@example.com",
+  "active": true
+}
 ```
+#### Tipo de dados Company
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at http://localhost:8080/q/dev/.
+* id: Long
+* cpf: String(CPF válido incluindo pontuação, Obrigatório quando type = "PF")
+* cnpj: String(CNPJ válido incluindo pontuação, Obrigatório quando type = "PJ")
+* type: String("PF", "PJ"")
+* email: String (Email válido)
+* active Boolean
 
-## Packaging and running the application
-
-The application can be packaged using:
-```shell script
-./mvnw package
+## Request DTO
+- - - -
+### CompanyDTO
+```json
+{
+  "cpf": "000.000.000-00",
+  "type": "PF",
+  "name": "John Doe",
+  "cep": "00000-000",
+  "email": "example@example.com"
+}
 ```
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+#### Tipo de dados CompanyDTO
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
+* cpf: String(CPF válido incluindo pontuação, Obrigatório quando type = "PF")
+* cnpj: String(CNPJ válido incluindo pontuação, Obrigatório quando type = "PJ")
+* type: String("PF", "PJ"")
+* email: String (Email válido)
 
-If you want to build an _über-jar_, execute the following command:
-```shell script
-./mvnw package -Dquarkus.package.type=uber-jar
+
+## Response Errors
+
+### ResponseError
+```json
+{
+  "reference": "https://docs.oracle.com/en",
+  "type": "Not Found Error",
+  "status": 404,
+  "details": "The queried element does not exists",
+  "errors": [{
+    "entity": "Company",
+    "reason": "Company with 10 id not found"
+  }]
+}
 ```
+#### Tipo de dados ResponseError
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+* reference: String(URL pattern) - *Link para a página da documentação do erro*
+* type: String - *Tipo de erro encontrado*
+* status: Integer - *Código de status enviado* 
+* details: String - *Detalhes adicionais do erro*
+* errors: List<BusinessError> - *Lista de erros ocorridos*
 
-## Creating a native executable
 
-You can create a native executable using: 
-```shell script
-./mvnw package -Pnative
-```
+## Company Endpoints
 
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using: 
-```shell script
-./mvnw package -Pnative -Dquarkus.native.container-build=true
-```
-
-You can then execute your native executable with: `./target/supplier-app-1.0-runner`
-
-If you want to learn more about building native executables, please consult https://quarkus.io/guides/maven-tooling.
-
-## Related Guides
-
-- RESTEasy Classic ([guide](https://quarkus.io/guides/resteasy)): REST endpoint framework implementing Jakarta REST and more
+| Método | Rota               | Status        | Resposta                                                              |
+|--------|--------------------|---------------|-----------------------------------------------------------------------|
+| GET    | /v1/companies      | 200           | Retorna um JSON com todos os serviços cadastrados                     |
+| GET    | /v1/companies/{id} | 200, 404      | Retorna um JSON com os dados do serviço com o id especificado na rota |
+| POST   | /v1/companies      | 201, 400, 422 | Retorna um JSON com os dados cadastrados                              |
+| DELETE | /v1/companies/{id} | 204, 404, 409 | Sem retorno                                                           |
+| PUT    | /v1/companies/{id} | 201, 404, 422 | Retorna um JSON com os dados atualizados                              |
